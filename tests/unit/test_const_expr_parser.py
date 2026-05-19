@@ -9,12 +9,14 @@ from mojo_bindgen.ir import (
     CastExpr,
     FloatLiteral,
     FloatType,
+    IntKind,
     IntLiteral,
     IntType,
     NullPtrLiteral,
     RefExpr,
     SizeOfExpr,
     StringLiteral,
+    UnaryExpr,
 )
 from mojo_bindgen.parsing.lowering import ConstExprParser, LiteralResolver
 from mojo_bindgen.parsing.lowering.const_expr import fold_const_expr
@@ -124,3 +126,39 @@ def test_const_expr_parser_classifies_broader_predefined_and_function_like_macro
     assert header_version.tokens == ["__STDC_VERSION_STDIO_H__"]
     assert function_like.kind == "function_like_unsupported"
     assert function_like.expr is None
+
+
+def test_const_expr_parser_general_casts_and_folding() -> None:
+    parser = ConstExprParser(LiteralResolver([]))
+
+    # Pre-populate custom types to replicate real parser TU-typedef lookup
+    u32_type = IntType(int_kind=IntKind.UINT, size_bytes=4, align_bytes=4)
+    u64_type = IntType(int_kind=IntKind.ULONGLONG, size_bytes=8, align_bytes=8)
+    parser.literal_resolver._type_spelling_int_cache["__u32"] = u32_type
+    parser.literal_resolver._type_spelling_int_cache["__u64"] = u64_type
+
+    # Parse (__u32)1 << 16
+    expr1 = parser.parse_tokens(["(", "(", "__u32", ")", "1", "<<", "16", ")"])
+    assert expr1 is not None
+    assert isinstance(expr1.expr, BinaryExpr)
+
+    folded1 = fold_const_expr(expr1.expr)
+    assert isinstance(folded1, CastExpr)
+    assert isinstance(folded1.expr, IntLiteral)
+    assert folded1.expr.value == 65536
+
+    # Parse ~(((__u64)1 << 48) - 1)
+    expr2 = parser.parse_tokens(
+        ["~", "(", "(", "(", "__u64", ")", "1", "<<", "48", ")", "-", "1", ")"]
+    )
+    assert expr2 is not None
+    assert isinstance(expr2.expr, UnaryExpr)
+
+    folded2 = fold_const_expr(expr2.expr)
+    assert isinstance(folded2, CastExpr)
+    assert isinstance(folded2.expr, IntLiteral)
+    # 1 << 48 = 281474976710656
+    # (1 << 48) - 1 = 281474976710655
+    # ~281474976710655 = -281474976710656
+    # Masked to 64-bit unsigned = 18446462598732840960
+    assert folded2.expr.value == 18446462598732840960

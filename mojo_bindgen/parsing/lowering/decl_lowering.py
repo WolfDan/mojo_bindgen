@@ -78,13 +78,28 @@ class DeclLowerer:
 
     def collect_macros(self) -> list[Decl]:
         """Lower all primary-file macro definitions into preserved IR nodes."""
+        macro_definitions: list[cx.Cursor] = []
+
+        # Walk translation unit in a single pass to populate typedef cache and collect primary macros
+        for cursor in self.tu.cursor.walk_preorder():
+            k = cursor.kind
+            if k == cx.CursorKind.TYPEDEF_DECL:
+                spelling = cursor.spelling
+                if spelling:
+                    resolved = self.primitive_resolver.resolve_primitive(
+                        cursor.underlying_typedef_type
+                    )
+                    if resolved is not None:
+                        self.const_expr_parser.literal_resolver._type_spelling_int_cache[
+                            spelling
+                        ] = resolved
+            elif k == cx.CursorKind.MACRO_DEFINITION:
+                if self.frontend.is_primary_file_cursor(cursor):
+                    macro_definitions.append(cursor)
+
         macro_env = collect_object_like_macro_env(self.tu)
         out: list[Decl] = []
-        for cursor in self.tu.cursor.walk_preorder():
-            if cursor.kind != cx.CursorKind.MACRO_DEFINITION:
-                continue
-            if not self.frontend.is_primary_file_cursor(cursor):
-                continue
+        for cursor in macro_definitions:
             parsed = self.const_expr_parser.parse_macro(cursor, macro_env)
             out.append(
                 MacroDecl(

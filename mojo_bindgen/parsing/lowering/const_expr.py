@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import clang.cindex as cx
 
 from mojo_bindgen.ir import (
+    _UNSIGNED_INT_KINDS,
     BinaryExpr,
     CastExpr,
     CharLiteral,
@@ -27,6 +28,7 @@ from mojo_bindgen.ir import (
     RefExpr,
     SizeOfExpr,
     StringLiteral,
+    Type,
     UnaryExpr,
     VoidType,
 )
@@ -134,25 +136,71 @@ def looks_function_like_macro_body(tokens: list[str]) -> bool:
     return True
 
 
+def _mask_to_target_type(value: int, target: Type | None) -> int:
+    """Mask or sign-extend value to match target IntType."""
+    if not isinstance(target, IntType):
+        return value
+    bit_width = target.size_bytes * 8
+    is_unsigned = target.int_kind in _UNSIGNED_INT_KINDS or target.int_kind == IntKind.BOOL
+    if is_unsigned:
+        return value & ((1 << bit_width) - 1)
+    else:
+        value = value & ((1 << bit_width) - 1)
+        if value & (1 << (bit_width - 1)):
+            return value - (1 << bit_width)
+        return value
+
+
+def _eval_to_int(expr: ConstExpr) -> int | None:
+    """Recursively evaluate an expression to a Python int if possible."""
+    if isinstance(expr, IntLiteral):
+        return expr.value
+    if isinstance(expr, CastExpr):
+        return _eval_to_int(expr.expr)
+    if isinstance(expr, UnaryExpr):
+        val = _eval_to_int(expr.operand)
+        if val is not None:
+            if expr.op == "-":
+                return -val
+            if expr.op == "~":
+                return ~val
+    if isinstance(expr, BinaryExpr):
+        lhs = _eval_to_int(expr.lhs)
+        rhs = _eval_to_int(expr.rhs)
+        if lhs is not None and rhs is not None:
+            return _eval_int_binary(expr.op, lhs, rhs)
+    return None
+
+
+def _find_cast_target(expr: ConstExpr) -> Type | None:
+    """Find the first CastExpr target type in the expression tree."""
+    if isinstance(expr, CastExpr):
+        return expr.target
+    if isinstance(expr, UnaryExpr):
+        return _find_cast_target(expr.operand)
+    if isinstance(expr, BinaryExpr):
+        return _find_cast_target(expr.lhs) or _find_cast_target(expr.rhs)
+    return None
+
+
 def fold_const_expr(expr: ConstExpr) -> ConstExpr:
     """Constant-fold integer unary/binary expressions where operands are literals."""
+    # First, try to evaluate the entire expression to an integer
+    val = _eval_to_int(expr)
+    if val is not None:
+        target = _find_cast_target(expr)
+        if target is not None:
+            masked_val = _mask_to_target_type(val, target)
+            return CastExpr(target=target, expr=IntLiteral(masked_val))
+        return IntLiteral(val)
+
+    # Fallback to structural folding if not fully evaluable
     if isinstance(expr, UnaryExpr):
         inner = fold_const_expr(expr.operand)
-        if isinstance(inner, IntLiteral):
-            v = inner.value
-            if expr.op == "-":
-                return IntLiteral(-v)
-            if expr.op == "~":
-                return IntLiteral(~v)
         return UnaryExpr(op=expr.op, operand=inner)
     if isinstance(expr, BinaryExpr):
         lhs = fold_const_expr(expr.lhs)
         rhs = fold_const_expr(expr.rhs)
-        if isinstance(lhs, IntLiteral) and isinstance(rhs, IntLiteral):
-            a, b = lhs.value, rhs.value
-            out = _eval_int_binary(expr.op, a, b)
-            if out is not None:
-                return IntLiteral(out)
         return BinaryExpr(op=expr.op, lhs=lhs, rhs=rhs)
     if isinstance(expr, CastExpr):
         inner = fold_const_expr(expr.expr)
@@ -360,10 +408,9 @@ class ConstExprParser:
             toks = stream._tokens
             i = stream._index
             if (
-                i + 2 < len(toks)
+                i + 1 < len(toks)
                 and _CAST_TYPE_IDENT_RE.match(toks[i] or "")
                 and toks[i + 1] == ")"
-                and toks[i + 2] in ("-", "+", "~", "(")
             ):
                 it = self.literal_resolver.int_type_for_type_spelling(toks[i])
                 if it is not None:
