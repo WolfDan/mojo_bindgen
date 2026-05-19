@@ -142,6 +142,7 @@ def render_layout_test_module(
     normalized_unit: Unit,
     mojo_module: MojoModule,
     main_module_name: str,
+    use_test_suite: bool = False,
 ) -> str:
     """Render a standalone Mojo file that asks Mojo for emitted record layout."""
 
@@ -156,35 +157,47 @@ def render_layout_test_module(
         "from std.sys.info import align_of, size_of",
         "from std.reflection import reflect",
     ]
+    if use_test_suite:
+        lines.append("from std.testing import assert_equal, TestSuite")
     if checks:
         imported = ", ".join(record.record_name for record in checks)
         lines.append(f"from {main_module_name} import {imported}")
-    lines.extend(
-        [
-            "",
-            "",
-            "def _check_eq(label: String, got: Int, expected: Int) raises:",
-            "    if got != expected:",
-            '        raise Error(label + ": got " + String(got) + ", expected " + String(expected))',
-        ]
-    )
+
+    if not use_test_suite:
+        lines.extend(
+            [
+                "",
+                "",
+                "def _check_eq(label: String, got: Int, expected: Int) raises:",
+                "    if got != expected:",
+                '        raise Error(label + ": got " + String(got) + ", expected " + String(expected))',
+            ]
+        )
 
     for record in checks:
         lines.extend(["", "", f"def test_layout_{record.record_name}() raises:"])
         lines.append(f"    comptime r = reflect[{record.record_name}]()")
         for check in record.checks:
-            lines.append(
-                f'    _check_eq("{check.label}", Int({check.expression}), {check.expected})'
-            )
+            if use_test_suite:
+                lines.append(
+                    f'    assert_equal(Int({check.expression}), {check.expected}, msg="{check.label}")'
+                )
+            else:
+                lines.append(
+                    f'    _check_eq("{check.label}", Int({check.expression}), {check.expected})'
+                )
         if not record.checks:
             lines.append("    pass")
 
     lines.extend(["", "", "def main() raises:"])
-    if checks:
-        for record in checks:
-            lines.append(f"    test_layout_{record.record_name}()")
+    if use_test_suite:
+        lines.append("    TestSuite.discover_tests[__functions_in_module()]().run()")
     else:
-        lines.append("    pass")
+        if checks:
+            for record in checks:
+                lines.append(f"    test_layout_{record.record_name}()")
+        else:
+            lines.append("    pass")
     return "\n".join(lines) + "\n"
 
 

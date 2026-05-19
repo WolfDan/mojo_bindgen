@@ -213,16 +213,35 @@ def test_render_layout_test_module_imports_records_and_calls_tests() -> None:
         members=[StoredMember(0, "x", BuiltinType(MojoBuiltin.C_INT), 0)],
     )
 
-    out = render_layout_test_module(
+    # Test the default (_check_eq) mode
+    out_default = render_layout_test_module(
         normalized_unit=_unit(decl),
         mojo_module=_module(mojo_decl),
         main_module_name="bindings",
     )
 
-    assert "from std.sys.info import align_of, size_of" in out
-    assert "from std.reflection import reflect" in out
-    assert "from bindings import Sample" in out
-    assert "def test_layout_Sample() raises:" in out
-    assert "comptime r = reflect[Sample]()" in out
-    assert "r.field_offset[index=0]()" in out
-    assert "def main() raises:\n    test_layout_Sample()" in out
+    assert "from std.sys.info import align_of, size_of" in out_default
+    assert "from std.reflection import reflect" in out_default
+    assert "from bindings import Sample" in out_default
+    assert "def test_layout_Sample() raises:" in out_default
+    assert "comptime r = reflect[Sample]()" in out_default
+    assert "r.field_offset[index=0]()" in out_default
+    assert "def main() raises:\n    test_layout_Sample()" in out_default
+
+    # Test the TestSuite mode
+    out_test_suite = render_layout_test_module(
+        normalized_unit=_unit(decl),
+        mojo_module=_module(mojo_decl),
+        main_module_name="bindings",
+        use_test_suite=True,
+    )
+
+    assert "from std.testing import assert_equal, TestSuite" in out_test_suite
+    assert "from bindings import Sample" in out_test_suite
+    assert "def test_layout_Sample() raises:" in out_test_suite
+    assert "comptime r = reflect[Sample]()" in out_test_suite
+    assert "assert_equal(" in out_test_suite
+    assert (
+        "def main() raises:\n    TestSuite.discover_tests[__functions_in_module()]().run()"
+        in out_test_suite
+    )

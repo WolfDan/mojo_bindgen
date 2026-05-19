@@ -31,6 +31,7 @@ class BindgenOptions:
     json_output: bool = False
     output: Path | None = None
     layout_test_output: Path | None = None
+    use_test_suite: bool = False
 
 
 @dataclass(frozen=True)
@@ -132,6 +133,7 @@ class BindgenOrchestrator:
                 normalized_unit=normalized_unit,
                 mojo_module=module,
                 main_module_name=self._layout_test_module_name(),
+                use_test_suite=self._options.use_test_suite,
             )
         return RenderedArtifacts(
             bindings_source=bindings_source,

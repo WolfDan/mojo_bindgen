@@ -127,10 +127,13 @@ def test_codegen_renders_bindings_and_layout_tests(monkeypatch) -> None:
         calls["module_comment"] = options.module_comment
         return "generated"
 
-    def fake_render_layout_test_module(*, normalized_unit, mojo_module, main_module_name):
+    def fake_render_layout_test_module(
+        *, normalized_unit, mojo_module, main_module_name, use_test_suite=False
+    ):
         calls["normalized_unit"] = normalized_unit
         calls["layout_module"] = mojo_module
         calls["main_module_name"] = main_module_name
+        calls["use_test_suite"] = use_test_suite
         return "layout"
 
     monkeypatch.setattr(orchestrator_mod, "render_mojo_module", fake_render_mojo_module)
@@ -154,6 +157,7 @@ def test_codegen_renders_bindings_and_layout_tests(monkeypatch) -> None:
         "normalized_unit": unit,
         "layout_module": module,
         "main_module_name": "demo_bindings",
+        "use_test_suite": False,
     }
 
 

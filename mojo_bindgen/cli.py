@@ -96,6 +96,13 @@ def run(
             show_default=False,
         ),
     ] = None,
+    use_test_suite: Annotated[
+        bool,
+        typer.Option(
+            "--use-test-suite",
+            help="Use Mojo's native TestSuite for layout tests.",
+        ),
+    ] = False,
 ) -> int:
     """Generate Mojo FFI from a C header using libclang.
 
@@ -119,6 +126,7 @@ def run(
                 json_output=json_output,
                 output=output,
                 layout_test_output=layout_test_output,
+                use_test_suite=use_test_suite,
             )
         )
         result = orchestrator.run()
