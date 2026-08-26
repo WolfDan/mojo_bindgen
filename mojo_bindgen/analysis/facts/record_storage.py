@@ -360,7 +360,7 @@ def _map_flexible_tail_metadata(
     if not isinstance(mapped_type, Array) or mapped_type.size != 0:
         return (
             None,
-            f"field `{field_display_name(field, index)}` did not map to InlineArray[..., 0]; "
+            f"field `{field_display_name(field, index)}` did not map to Array[..., 0]; "
             "opaque storage emitted",
         )
     return (

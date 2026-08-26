@@ -145,20 +145,20 @@ def _bindgen_dylib() -> _DLHandle:
         abort(t"bindgen: failed to load dynamic library '{_BINDGEN_LIB_NAME}'")
     return dylib
 
-def _bindgen_function[Fn: TrivialRegisterPassable](symbol: StringSlice) -> Fn:
+def _bindgen_function[Fn: TrivialRegisterPassable](symbol: StringSpan) -> Fn:
     var fn_ptr = _bindgen_dylib().get_symbol[NoneType](symbol)
     if not fn_ptr:
         abort(
             t"bindgen: missing C function symbol '{symbol}' "
             t"in dynamic library '{_BINDGEN_LIB_NAME}'"
         )
-    return UnsafePointer(to=fn_ptr.value()).bitcast[Fn]()[]"""
+    return Pointer(to=fn_ptr.value()).unsafe_bitcast[Fn]()[]"""
 
 
-_GLOBAL_SYMBOL_HELPERS = """struct GlobalVar[T: Copyable & ImplicitlyDestructible, //, link: StaticString]:
+_GLOBAL_SYMBOL_HELPERS = """struct GlobalVar[T: Copyable & Deinitable, //, link: StaticString]:
     @staticmethod
-    def _raw() -> UnsafePointer[Self.T, MutUntrackedOrigin]:
-        var opt: Optional[UnsafePointer[Self.T, MutUntrackedOrigin]] = _bindgen_dylib().get_symbol[Self.T](StringSlice(Self.link))
+    def _raw() -> Pointer[Self.T, MutUntrackedOrigin]:
+        var opt: Optional[Pointer[Self.T, MutUntrackedOrigin]] = _bindgen_dylib().get_symbol[Self.T](StringSpan(Self.link))
         if not opt:
             abort(
                 t"bindgen: missing C global symbol '{Self.link}' "
@@ -167,8 +167,8 @@ _GLOBAL_SYMBOL_HELPERS = """struct GlobalVar[T: Copyable & ImplicitlyDestructibl
         return opt.value()
 
     @staticmethod
-    def ptr() -> UnsafePointer[Self.T, MutUntrackedOrigin]:
-        return rebind[UnsafePointer[Self.T, MutUntrackedOrigin]](Self._raw())
+    def ptr() -> Pointer[Self.T, MutUntrackedOrigin]:
+        return rebind[Pointer[Self.T, MutUntrackedOrigin]](Self._raw())
 
     @staticmethod
     def load() -> Self.T:
@@ -176,13 +176,13 @@ _GLOBAL_SYMBOL_HELPERS = """struct GlobalVar[T: Copyable & ImplicitlyDestructibl
 
     @staticmethod
     def store(value: Self.T) -> None:
-        var p = rebind[UnsafePointer[Self.T, MutUntrackedOrigin]](Self._raw())
+        var p = rebind[Pointer[Self.T, MutUntrackedOrigin]](Self._raw())
         p[] = value.copy()
 
-struct GlobalConst[T: Copyable & ImplicitlyDestructible, //, link: StaticString]:
+struct GlobalConst[T: Copyable & Deinitable, //, link: StaticString]:
     @staticmethod
-    def _raw() -> UnsafePointer[Self.T, MutUntrackedOrigin]:
-        var opt: Optional[UnsafePointer[Self.T, MutUntrackedOrigin]] = _bindgen_dylib().get_symbol[Self.T](StringSlice(Self.link))
+    def _raw() -> Pointer[Self.T, MutUntrackedOrigin]:
+        var opt: Optional[Pointer[Self.T, MutUntrackedOrigin]] = _bindgen_dylib().get_symbol[Self.T](StringSpan(Self.link))
         if not opt:
             abort(
                 t"bindgen: missing C global symbol '{Self.link}' "
@@ -191,8 +191,8 @@ struct GlobalConst[T: Copyable & ImplicitlyDestructible, //, link: StaticString]
         return opt.value()
 
     @staticmethod
-    def ptr() -> UnsafePointer[Self.T, ImmutUntrackedOrigin]:
-        return rebind[UnsafePointer[Self.T, ImmutUntrackedOrigin]](Self._raw())
+    def ptr() -> Pointer[Self.T, ImmUntrackedOrigin]:
+        return rebind[Pointer[Self.T, ImmUntrackedOrigin]](Self._raw())
 
     @staticmethod
     def load() -> Self.T:

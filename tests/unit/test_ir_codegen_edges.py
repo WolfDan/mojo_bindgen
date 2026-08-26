@@ -578,10 +578,8 @@ def test_generator_renders_global_var_stub_and_macro_comments() -> None:
         "external_call" in import_line and "OwnedDLHandle" in import_line and "c_int" in import_line
     )
     assert "def _bindgen_dylib() -> _DLHandle:" in out
-    assert "struct GlobalVar[T: Copyable & ImplicitlyDestructible, //, link: StaticString]:" in out
-    assert (
-        "struct GlobalConst[T: Copyable & ImplicitlyDestructible, //, link: StaticString]:" in out
-    )
+    assert "struct GlobalVar[T: Copyable & Deinitable, //, link: StaticString]:" in out
+    assert "struct GlobalConst[T: Copyable & Deinitable, //, link: StaticString]:" in out
     assert 'comptime global_counter = GlobalVar[T=c_int, link="global_counter"]' in out
     assert 'comptime LIB_NAME = "bindgen"' in out
     assert "comptime LIMIT = c_int(7)" in out
@@ -853,7 +851,7 @@ def test_generator_preserves_typedef_names_in_fields_globals_and_aliases() -> No
     )
     out = MojoGenerator(MojoEmitOptions()).generate(unit)
     assert "comptime my_uint = c_int" in out
-    assert "comptime my_uint_ptr = Optional[UnsafePointer[my_uint, MutUntrackedOrigin]]" in out
+    assert "comptime my_uint_ptr = Optional[Pointer[my_uint, MutUntrackedOrigin]]" in out
     assert "var value: my_uint" in out
     assert "var ptr: my_uint_ptr" in out
     assert 'comptime global_ptr = GlobalVar[T=my_uint_ptr, link="global_ptr"]' in out
@@ -942,15 +940,15 @@ def test_generator_emits_function_pointer_return_wrappers_for_both_link_modes() 
     assert ("def pfr_select_add_direct() -> pfr_select_add_direct_return_cb:") in dl_out
     assert (
         'var _bindgen_c_fn = _bindgen_function[def() thin abi("C") -> pfr_binary_op_t]('
-        'StringSlice("pfr_select_add"))'
+        'StringSpan("pfr_select_add"))'
     ) in dl_out
     assert (
         'var _bindgen_c_fn = _bindgen_function[def() thin abi("C") -> '
-        'pfr_select_add_direct_return_cb](StringSlice("pfr_select_add_direct"))' in dl_out
+        'pfr_select_add_direct_return_cb](StringSpan("pfr_select_add_direct"))' in dl_out
     )
     assert (
         "var _bindgen_c_fn = _bindgen_function[def(pfr_binary_op_t, c_int, c_int) "
-        'thin abi("C") -> c_int](StringSlice("pfr_call"))' in dl_out
+        'thin abi("C") -> c_int](StringSpan("pfr_call"))' in dl_out
     )
     assert "return _bindgen_c_fn(op, lhs, rhs)" in dl_out
 
@@ -1225,19 +1223,19 @@ def test_generator_uses_callback_alias_types_in_wrapper_abi_lists() -> None:
     assert "comptime sqlite3_create_collation_v2_xDestroy_cb = def (" in out
     assert (
         "def sqlite3_create_collation_v2("
-        "db: Optional[UnsafePointer[sqlite3, MutUntrackedOrigin]], "
-        "zName: Optional[UnsafePointer[c_char, MutUntrackedOrigin]], "
+        "db: Optional[Pointer[sqlite3, MutUntrackedOrigin]], "
+        "zName: Optional[Pointer[c_char, MutUntrackedOrigin]], "
         "eTextRep: c_int, "
-        "ctx: Optional[MutOpaquePointer[MutUntrackedOrigin]], "
+        "ctx: Optional[OpaquePointer[mut=True, MutUntrackedOrigin]], "
         "xCompare: sqlite3_create_collation_v2_xCompare_cb, "
         "xDestroy: sqlite3_create_collation_v2_xDestroy_cb"
         ') abi("C") -> c_int:'
     ) in out
     assert (
         'return external_call["sqlite3_create_collation_v2", c_int, '
-        "Optional[UnsafePointer[sqlite3, MutUntrackedOrigin]], "
-        "Optional[UnsafePointer[c_char, MutUntrackedOrigin]], c_int, "
-        "Optional[MutOpaquePointer[MutUntrackedOrigin]], "
+        "Optional[Pointer[sqlite3, MutUntrackedOrigin]], "
+        "Optional[Pointer[c_char, MutUntrackedOrigin]], c_int, "
+        "Optional[OpaquePointer[mut=True, MutUntrackedOrigin]], "
         "sqlite3_create_collation_v2_xCompare_cb, sqlite3_create_collation_v2_xDestroy_cb]"
         "(db, zName, eTextRep, ctx, xCompare, xDestroy)"
     ) in out
@@ -1288,12 +1286,12 @@ def test_generator_keeps_nested_callback_typedef_in_wrapper_abi_lists() -> None:
     )
     assert "comptime nested_cb_t = def (" in out
     assert (
-        "def install_nested_cb(slot: Optional[UnsafePointer[Optional[UnsafePointer[nested_cb_t, "
+        "def install_nested_cb(slot: Optional[Pointer[Optional[Pointer[nested_cb_t, "
         'MutUntrackedOrigin]], MutUntrackedOrigin]]) abi("C") -> None:'
     ) in out
     assert (
         'external_call["install_nested_cb", NoneType, '
-        "Optional[UnsafePointer[Optional[UnsafePointer[nested_cb_t, MutUntrackedOrigin]], "
+        "Optional[Pointer[Optional[Pointer[nested_cb_t, MutUntrackedOrigin]], "
         "MutUntrackedOrigin]]](slot)"
     ) in out
 

@@ -4,8 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-08-26
+
 ### Changed
 
+- Emit final Mojo 1.0 spellings for fixed arrays, pointers, opaque pointers,
+  string spans, deinitability, pointer bitcasts, and flexible-tail offsets.
 - Preserve top-level C function source attributes such as `inline`, `extern inline`,
   and `_Noreturn` in CIR and MojoIR, and emit conservative stub comments instead
   of callable wrappers for inline declarations that may not provide a stable

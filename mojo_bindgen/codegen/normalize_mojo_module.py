@@ -543,9 +543,7 @@ class NormalizeMojoModulePass:
         if isinstance(t, NamedType):
             return
         if isinstance(t, Pointer):
-            if t.pointee is None:
-                self._record_import("std.memory", "ImmutOpaquePointer", "MutOpaquePointer")
-            else:
+            if t.pointee is not None:
                 self._collect_type_imports(t.pointee)
             return
         if isinstance(t, Array):

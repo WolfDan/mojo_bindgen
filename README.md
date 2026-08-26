@@ -2,9 +2,6 @@
 
 # mojo-bindgen
 
-> [!WARNING]
-> Alpha stage: this project is under heavy development and may change quickly.
-
 **C headers -> Mojo FFI.** `mojo-bindgen` parses real C with
 [libclang](https://pypi.org/project/libclang/), and emits Mojo bindings for `external_call` or
 `owned_dl_handle` workflows. this mirrors the spirit of `rust-bindgen` which follows the same approch for `Rust`
@@ -17,7 +14,7 @@ correctly.
 
 - Python 3.14+
 - a system `libclang` compatible with the `libclang` Python wheel
-- a Mojo (nightly) toolchain if you want to build or run the generated bindings
+- a Mojo 1.0+ toolchain if you want to build or run the generated bindings
 
 ## Installation
 
@@ -127,9 +124,8 @@ mojo-bindgen include/mylib.h \
 
 ## What works today?
 
-`mojo-bindgen` is still alpha and evolves quickly, but it already supports a
-useful slice of real C headers and is practical today as a starting point for
-generating bindings.
+`mojo-bindgen` evolves quickly, but it already supports a useful slice of real C
+headers and is practical today as a starting point for generating bindings.
 
 Current support includes:
 
@@ -147,7 +143,7 @@ Current support includes:
 - **Bitfields:** bitfields are emitted through explicit storage fields plus
   synthesized getter and setter methods.
 - **Unions:** eligible unions map to `UnsafeUnion[...]`; unions that cannot
-  be represented safely fall back to opaque `InlineArray[...]` storage with
+  be represented safely fall back to opaque `Array[...]` storage with
   diagnostics to preserve layout.
 - **Opaque and difficult layouts:** incomplete records, packed layouts, and
   alignment-sensitive record storages are preserved conservatively as opaque byte

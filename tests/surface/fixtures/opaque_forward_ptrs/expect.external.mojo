@@ -8,8 +8,8 @@ from std.ffi import external_call
 struct ofp_handle(Copyable, Movable):
     pass
 
-def ofp_open() abi("C") -> Optional[UnsafePointer[ofp_handle, MutUntrackedOrigin]]:
-    return external_call["ofp_open", Optional[UnsafePointer[ofp_handle, MutUntrackedOrigin]]]()
+def ofp_open() abi("C") -> Optional[Pointer[ofp_handle, MutUntrackedOrigin]]:
+    return external_call["ofp_open", Optional[Pointer[ofp_handle, MutUntrackedOrigin]]]()
 
-def ofp_close(handle: Optional[UnsafePointer[ofp_handle, MutUntrackedOrigin]]) abi("C") -> None:
-    external_call["ofp_close", NoneType, Optional[UnsafePointer[ofp_handle, MutUntrackedOrigin]]](handle)
+def ofp_close(handle: Optional[Pointer[ofp_handle, MutUntrackedOrigin]]) abi("C") -> None:
+    external_call["ofp_close", NoneType, Optional[Pointer[ofp_handle, MutUntrackedOrigin]]](handle)

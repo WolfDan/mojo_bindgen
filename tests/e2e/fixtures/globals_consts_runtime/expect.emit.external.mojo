@@ -2,8 +2,8 @@
 from std.ffi import external_call, DEFAULT_RTLD, OwnedDLHandle, _DLHandle, _Global, _get_global
 from std.builtin.simd import SIMD
 from std.atomic import Atomic
-struct GlobalVar[T: Copyable & ImplicitlyDestructible, //, link: StaticString]:
-struct GlobalConst[T: Copyable & ImplicitlyDestructible, //, link: StaticString]:
+struct GlobalVar[T: Copyable & Deinitable, //, link: StaticString]:
+struct GlobalConst[T: Copyable & Deinitable, //, link: StaticString]:
 comptime int32_t = Int32
 comptime gcr_vec4 = SIMD[DType.float32, 4]
 comptime gcr_mut = GlobalVar[T=int32_t, link="gcr_mut"]

@@ -9,4 +9,4 @@ comptime uint8_t = UInt8
 
 @fieldwise_init
 struct faf_block(Copyable, Movable):
-    var bytes: InlineArray[uint8_t, 4]
+    var bytes: Array[uint8_t, 4]

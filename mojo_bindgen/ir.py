@@ -397,7 +397,7 @@ class StructRef(SerDeMixin):
     record bodies use a stable parent-scoped synthetic name from the parser.
 
     Unions carry ``is_union=True`` and ``size_bytes`` so the emitter can map
-    by-value unions to ``InlineArray[UInt8, size]`` without a separate lookup.
+    by-value unions to ``Array[UInt8, size]`` without a separate lookup.
     """
 
     SERDE: ClassVar[SerdeSpec] = SerdeSpec(

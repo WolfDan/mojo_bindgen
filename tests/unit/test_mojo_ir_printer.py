@@ -325,7 +325,7 @@ def test_render_mojo_module_external_surface_with_synthesized_callback_aliases()
     assert "comptime Packet = UnsafeUnion[c_int, Widget]" in out
     assert "comptime LIMIT = (1 + 2)" in out
     assert (
-        'def install(cb: install_cb, widget: UnsafePointer[Widget, ImmutUntrackedOrigin]) abi("C") -> None:'
+        'def install(cb: install_cb, widget: Pointer[Widget, ImmUntrackedOrigin]) abi("C") -> None:'
         in out
     )
 
@@ -420,7 +420,7 @@ def test_render_callback_alias_uses_none_in_signature_position() -> None:
     )
 
     assert (
-        'comptime log_callback_t = def (msg: UnsafePointer[c_char, ImmutUntrackedOrigin]) thin abi("C") -> None'
+        'comptime log_callback_t = def (msg: Pointer[c_char, ImmUntrackedOrigin]) thin abi("C") -> None'
         in out
     )
 
@@ -463,18 +463,18 @@ def test_render_struct_emits_flexible_tail_helpers() -> None:
         MojoIRPrintOptions(module_comment=False),
     )
 
-    assert "var payload: InlineArray[c_uchar, 0]" in rendered
+    assert "var payload: Array[c_uchar, 0]" in rendered
     assert "@staticmethod" in rendered
     assert "def payload_offset() -> UInt:" in rendered
     assert (
-        "def payload_ptr(base: UnsafePointer[Packet, ImmutUntrackedOrigin]) -> "
-        "UnsafePointer[c_uchar, ImmutUntrackedOrigin]:" in rendered
+        "def payload_ptr(base: Pointer[Packet, ImmUntrackedOrigin]) -> "
+        "Pointer[c_uchar, ImmUntrackedOrigin]:" in rendered
     )
     assert (
-        "def payload_mut_ptr(base: UnsafePointer[Packet, MutUntrackedOrigin]) -> "
-        "UnsafePointer[c_uchar, MutUntrackedOrigin]:" in rendered
+        "def payload_mut_ptr(base: Pointer[Packet, MutUntrackedOrigin]) -> "
+        "Pointer[c_uchar, MutUntrackedOrigin]:" in rendered
     )
-    assert "return raw + 4" in rendered
+    assert "return raw.unsafe_offset(4)" in rendered
 
 
 def test_normalize_and_render_sizeof_imports_std_sys_info() -> None:
@@ -724,7 +724,7 @@ def test_render_owned_dl_handle_function_local_does_not_collide_with_parameters(
     )
     assert (
         "var _bindgen_c_fn_1 = _bindgen_function[def(execute_on_thread_cb, c_int) "
-        'thin abi("C") -> NoneType](StringSlice("execute_on_thread"))'
+        'thin abi("C") -> NoneType](StringSpan("execute_on_thread"))'
     ) in rendered
     assert "_bindgen_c_fn_1(fn_, _bindgen_c_fn)" in rendered
     assert "var fn_ =" not in rendered
@@ -828,7 +828,7 @@ def test_normalize_and_printer_keep_union_byte_fallback_without_unsafe_union_imp
     rendered = MojoIRPrinter(MojoIRPrintOptions(module_comment=False)).render(normalized)
 
     assert "UnsafeUnion" not in rendered
-    assert "comptime Dup = InlineArray[UInt8, 4]" in rendered
+    assert "comptime Dup = Array[UInt8, 4]" in rendered
 
 
 def test_printer_uses_explicit_align_decorator_only() -> None:
@@ -963,7 +963,7 @@ def test_printer_renders_lowered_struct_layout_members_without_normalize_inferen
 
     assert "@align(16)\n@fieldwise_init\nstruct Aligned" in rendered
     assert "var __pad0: UInt32" in rendered
-    assert "var storage: InlineArray[UInt8, 5]" in rendered
+    assert "var storage: Array[UInt8, 5]" in rendered
     assert "var __bf0: c_uchar" in rendered
     assert "def enabled(self) -> Bool:" in rendered
     assert "def set_enabled(mut self, value: Bool):" in rendered
@@ -1112,12 +1112,9 @@ def test_rendered_mojo_module_compiles_with_mixed_decl_kinds(tmp_path: Path) -> 
 
     assert proc.returncode == 0, proc.stderr
     assert "def _bindgen_dylib() -> _DLHandle:" in rendered
-    assert (
-        "struct GlobalVar[T: Copyable & ImplicitlyDestructible, //, link: StaticString]:"
-        in rendered
-    )
+    assert "struct GlobalVar[T: Copyable & Deinitable, //, link: StaticString]:" in rendered
     assert 'def install(cb: binary_cb_t) abi("C") -> None:' in rendered
-    assert "def load_widget() -> UnsafePointer[Widget, MutUntrackedOrigin]:" in rendered
+    assert "def load_widget() -> Pointer[Widget, MutUntrackedOrigin]:" in rendered
 
 
 @pytest.mark.skipif(shutil.which("pixi") is None, reason="requires pixi with mojo toolchain")

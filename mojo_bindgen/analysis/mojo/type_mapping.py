@@ -268,7 +268,7 @@ class MapTypePass:
             return Array(element=self.run(t.element), size=t.size, array_kind="fixed")
 
         if t.array_kind == "flexible" and t.size is None:
-            # Flexible array members mapped as InlineArray[T, 0]
+            # Flexible array members mapped as Array[T, 0]
             return Array(element=self.run(t.element), size=0, array_kind="fixed")
         # fallback: pointer
         return Pointer(

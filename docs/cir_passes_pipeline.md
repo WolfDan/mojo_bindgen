@@ -290,7 +290,7 @@ Purpose:
 
 - map complete unions to `UnsafeUnion[...]` when member types are distinct and
   representable
-- fall back to `InlineArray[UInt8, size]` when union mapping would be unsafe or
+- fall back to `Array[UInt8, size]` when union mapping would be unsafe or
   ambiguous
 - emit placeholder aliases for incomplete unions
 

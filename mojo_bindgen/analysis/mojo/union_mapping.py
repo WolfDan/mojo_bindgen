@@ -139,7 +139,7 @@ def _byte_storage_union_alias(decl: Struct, *, alias_name: str, plan: _UnionArmP
         diagnostics=[
             *plan.diagnostics,
             union_note(
-                f"union `{decl.c_name}` mapped as InlineArray[UInt8, {decl.size_bytes}] to preserve layout"
+                f"union `{decl.c_name}` mapped as Array[UInt8, {decl.size_bytes}] to preserve layout"
             ),
         ],
         doc=decl.doc,

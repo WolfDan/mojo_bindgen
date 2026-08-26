@@ -16,12 +16,12 @@ def _assert(label: String, cond: Bool) raises:
     print(label + "|ok")
 
 
-def _cstr(s: StaticString) -> UnsafePointer[Int8, ImmutUntrackedOrigin]:
-    return rebind[UnsafePointer[Int8, ImmutUntrackedOrigin]](s.unsafe_ptr())
+def _cstr(s: StaticString) -> Pointer[Int8, ImmUntrackedOrigin]:
+    return rebind[Pointer[Int8, ImmUntrackedOrigin]](s.unsafe_ptr())
 
 
-def _cstr_mut(s: StaticString) -> UnsafePointer[Int8, MutUntrackedOrigin]:
-    return rebind[UnsafePointer[Int8, MutUntrackedOrigin]](s.unsafe_ptr())
+def _cstr_mut(s: StaticString) -> Pointer[Int8, MutUntrackedOrigin]:
+    return rebind[Pointer[Int8, MutUntrackedOrigin]](s.unsafe_ptr())
 
 
 def _ignore_png_message(png_ptr: png.png_structp, msg: png.png_const_charp) abi("C"):
@@ -63,7 +63,7 @@ def run_write_roundtrip_checks() raises:
 
     var image_write = alloc[png.png_image](1)
     image_write[0] = png.png_image(
-        opaque=Optional[UnsafePointer[png.png_control, MutUntrackedOrigin]](),
+        opaque=Optional[Pointer[png.png_control, MutUntrackedOrigin]](),
         version=c_uint(png.PNG_IMAGE_VERSION),
         width=c_uint(IMAGE_W),
         height=c_uint(IMAGE_H),
@@ -71,22 +71,22 @@ def run_write_roundtrip_checks() raises:
         flags=0,
         colormap_entries=0,
         warning_or_error=0,
-        message=InlineArray[Int8, 64](uninitialized=True),
+        message=Array[Int8, 64](uninitialized=True),
     )
     var png_path = _cstr("/tmp/mojo_bindgen_libpng_smoke.png")
     var write_ok = png.png_image_write_to_file(
         image_write,
         png_path,
         0,
-        rebind[ImmutOpaquePointer[ImmutUntrackedOrigin]](pixels),
+        rebind[OpaquePointer[mut=False, ImmUntrackedOrigin]](pixels),
         IMAGE_W * CHANNELS,
-        Optional[ImmutOpaquePointer[ImmutUntrackedOrigin]](),
+        Optional[OpaquePointer[mut=False, ImmUntrackedOrigin]](),
     )
     _assert("libpng.write_to_file", write_ok != 0)
 
     var image_read = alloc[png.png_image](1)
     image_read[0] = png.png_image(
-        opaque=Optional[UnsafePointer[png.png_control, MutUntrackedOrigin]](),
+        opaque=Optional[Pointer[png.png_control, MutUntrackedOrigin]](),
         version=c_uint(png.PNG_IMAGE_VERSION),
         width=0,
         height=0,
@@ -94,7 +94,7 @@ def run_write_roundtrip_checks() raises:
         flags=0,
         colormap_entries=0,
         warning_or_error=0,
-        message=InlineArray[Int8, 64](uninitialized=True),
+        message=Array[Int8, 64](uninitialized=True),
     )
     var begin_ok = png.png_image_begin_read_from_file(image_read, png_path)
     _assert("libpng.begin_read_from_file", begin_ok != 0)
@@ -106,9 +106,9 @@ def run_write_roundtrip_checks() raises:
     var finish_ok = png.png_image_finish_read(
         image_read,
         png.png_const_colorp(),
-        rebind[MutOpaquePointer[MutUntrackedOrigin]](out_pixels),
+        rebind[OpaquePointer[mut=True, MutUntrackedOrigin]](out_pixels),
         IMAGE_W * CHANNELS,
-        Optional[MutOpaquePointer[MutUntrackedOrigin]](),
+        Optional[OpaquePointer[mut=True, MutUntrackedOrigin]](),
     )
     _assert("libpng.finish_read", finish_ok != 0)
     _assert("libpng.pixel_roundtrip_0", out_pixels[0] == pixels[0])
@@ -144,7 +144,7 @@ def run_memory_roundtrip_checks() raises:
     # Build a writer-side png_image matching run_write_roundtrip_checks().
     var image_write = alloc[png.png_image](1)
     image_write[0] = png.png_image(
-        opaque=Optional[UnsafePointer[png.png_control, MutUntrackedOrigin]](),
+        opaque=Optional[Pointer[png.png_control, MutUntrackedOrigin]](),
         version=c_uint(png.PNG_IMAGE_VERSION),
         width=c_uint(IMAGE_W),
         height=c_uint(IMAGE_H),
@@ -152,7 +152,7 @@ def run_memory_roundtrip_checks() raises:
         flags=0,
         colormap_entries=0,
         warning_or_error=0,
-        message=InlineArray[Int8, 64](uninitialized=True),
+        message=Array[Int8, 64](uninitialized=True),
     )
 
     # Exercise png_image_write_to_memory with both a NULL memory pointer
@@ -160,12 +160,12 @@ def run_memory_roundtrip_checks() raises:
     var memory_bytes_out = alloc[png.png_alloc_size_t](1)
     var write_size_ok = png.png_image_write_to_memory(
         image_write,
-        Optional[MutOpaquePointer[MutUntrackedOrigin]](),
+        Optional[OpaquePointer[mut=True, MutUntrackedOrigin]](),
         memory_bytes_out,
         0,
-        rebind[ImmutOpaquePointer[ImmutUntrackedOrigin]](pixels),
+        rebind[OpaquePointer[mut=False, ImmUntrackedOrigin]](pixels),
         IMAGE_W * CHANNELS,
-        Optional[ImmutOpaquePointer[ImmutUntrackedOrigin]](),
+        Optional[OpaquePointer[mut=False, ImmUntrackedOrigin]](),
     )
     _assert("libpng.write_to_memory_size", write_size_ok != 0)
     _assert("libpng.write_to_memory_size_nonzero", memory_bytes_out[0] > 0)
@@ -173,18 +173,18 @@ def run_memory_roundtrip_checks() raises:
     var png_bytes = alloc[UInt8](Int(memory_bytes_out[0]))
     var write_ok = png.png_image_write_to_memory(
         image_write,
-        rebind[MutOpaquePointer[MutUntrackedOrigin]](png_bytes),
+        rebind[OpaquePointer[mut=True, MutUntrackedOrigin]](png_bytes),
         memory_bytes_out,
         0,
-        rebind[ImmutOpaquePointer[ImmutUntrackedOrigin]](pixels),
+        rebind[OpaquePointer[mut=False, ImmUntrackedOrigin]](pixels),
         IMAGE_W * CHANNELS,
-        Optional[ImmutOpaquePointer[ImmutUntrackedOrigin]](),
+        Optional[OpaquePointer[mut=False, ImmUntrackedOrigin]](),
     )
     _assert("libpng.write_to_memory", write_ok != 0)
 
     var image_read = alloc[png.png_image](1)
     image_read[0] = png.png_image(
-        opaque=Optional[UnsafePointer[png.png_control, MutUntrackedOrigin]](),
+        opaque=Optional[Pointer[png.png_control, MutUntrackedOrigin]](),
         version=UInt32(png.PNG_IMAGE_VERSION),
         width=0,
         height=0,
@@ -192,12 +192,12 @@ def run_memory_roundtrip_checks() raises:
         flags=0,
         colormap_entries=0,
         warning_or_error=0,
-        message=InlineArray[Int8, 64](uninitialized=True),
+        message=Array[Int8, 64](uninitialized=True),
     )
 
     var begin_ok = png.png_image_begin_read_from_memory(
         image_read,
-        rebind[ImmutOpaquePointer[ImmutUntrackedOrigin]](png_bytes),
+        rebind[OpaquePointer[mut=False, ImmUntrackedOrigin]](png_bytes),
         UInt(memory_bytes_out[0]),
     )
     _assert("libpng.begin_read_from_memory", begin_ok != 0)
@@ -207,9 +207,9 @@ def run_memory_roundtrip_checks() raises:
     var finish_ok = png.png_image_finish_read(
         image_read,
         png.png_const_colorp(),
-        rebind[MutOpaquePointer[MutUntrackedOrigin]](out_pixels),
+        rebind[OpaquePointer[mut=True, MutUntrackedOrigin]](out_pixels),
         IMAGE_W * CHANNELS,
-        Optional[MutOpaquePointer[MutUntrackedOrigin]](),
+        Optional[OpaquePointer[mut=True, MutUntrackedOrigin]](),
     )
     _assert("libpng.finish_read_memory", finish_ok != 0)
     _assert("libpng.pixel_roundtrip_mem_0", out_pixels[0] == pixels[0])
@@ -227,7 +227,7 @@ def run_alpha_removal_compositing_checks() raises:
     # background color.
     var image_read = alloc[png.png_image](1)
     image_read[0] = png.png_image(
-        opaque=Optional[UnsafePointer[png.png_control, MutUntrackedOrigin]](),
+        opaque=Optional[Pointer[png.png_control, MutUntrackedOrigin]](),
         version=UInt32(png.PNG_IMAGE_VERSION),
         width=0,
         height=0,
@@ -235,7 +235,7 @@ def run_alpha_removal_compositing_checks() raises:
         flags=0,
         colormap_entries=0,
         warning_or_error=0,
-        message=InlineArray[Int8, 64](uninitialized=True),
+        message=Array[Int8, 64](uninitialized=True),
     )
 
     var png_path = _cstr("/tmp/mojo_bindgen_libpng_smoke.png")
@@ -247,16 +247,16 @@ def run_alpha_removal_compositing_checks() raises:
     var background = alloc[png.png_color_struct](1)
     background[0] = png.png_color_struct(red=7, green=11, blue=13)
     var background_ptr = rebind[
-        UnsafePointer[png.png_color_struct, ImmutUntrackedOrigin]
+        Pointer[png.png_color_struct, ImmUntrackedOrigin]
     ](background)
 
     var out_rgb = alloc[UInt8](IMAGE_W * IMAGE_H * 3)
     var finish_ok = png.png_image_finish_read(
         image_read,
         background_ptr,
-        rebind[MutOpaquePointer[MutUntrackedOrigin]](out_rgb),
+        rebind[OpaquePointer[mut=True, MutUntrackedOrigin]](out_rgb),
         IMAGE_W * 3,
-        Optional[MutOpaquePointer[MutUntrackedOrigin]](),
+        Optional[OpaquePointer[mut=True, MutUntrackedOrigin]](),
     )
     _assert("libpng.alpha_finish_read", finish_ok != 0)
 
@@ -277,7 +277,7 @@ def run_alpha_removal_compositing_checks() raises:
 def run_transform_and_options_checks() raises:
     var png_ptr = png.png_create_write_struct(
         _cstr("1.6.43"),
-        Optional[MutOpaquePointer[MutUntrackedOrigin]](),
+        Optional[OpaquePointer[mut=True, MutUntrackedOrigin]](),
         _ignore_png_message,
         _ignore_png_message,
     )
@@ -328,13 +328,13 @@ def run_transform_and_options_checks() raises:
         text=_cstr_mut("mojo-bindgen-smoke"),
         text_length=18,
         itxt_length=0,
-        lang=Optional[UnsafePointer[Int8, MutUntrackedOrigin]](),
-        lang_key=Optional[UnsafePointer[Int8, MutUntrackedOrigin]](),
+        lang=Optional[Pointer[Int8, MutUntrackedOrigin]](),
+        lang_key=Optional[Pointer[Int8, MutUntrackedOrigin]](),
     )
     png.png_set_text(
         png_const_ptr,
         info_ptr,
-        rebind[png.png_const_textp](text_entry),
+        rebind[png.png_const_textp](Optional[Pointer[png.png_text_struct, MutUntrackedOrigin]](text_entry)),
         1,
     )
 
@@ -409,14 +409,14 @@ def run_lightweight_struct_api_checks() raises:
     sig[6] = 26
     sig[7] = 10
     var sig_ok = png.png_sig_cmp(
-        rebind[UnsafePointer[UInt8, ImmutUntrackedOrigin]](sig),
+        rebind[Pointer[UInt8, ImmUntrackedOrigin]](sig),
         0,
         8,
     )
     _assert("libpng.sig_cmp_valid", sig_ok == 0)
     sig[1] = 81
     var sig_bad = png.png_sig_cmp(
-        rebind[UnsafePointer[UInt8, ImmutUntrackedOrigin]](sig),
+        rebind[Pointer[UInt8, ImmUntrackedOrigin]](sig),
         0,
         8,
     )

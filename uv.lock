@@ -83,7 +83,7 @@ wheels = [
 
 [[package]]
 name = "mojo-bindgen"
-version = "0.3.2"
+version = "0.3.5"
 source = { editable = "." }
 dependencies = [
     { name = "libclang" },

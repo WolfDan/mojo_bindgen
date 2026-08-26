@@ -8,18 +8,18 @@ comptime uint32_t = UInt32
 @align(4)
 struct nft_packet_tail:
     var len: uint32_t
-    var payload: InlineArray[c_uchar, 0]
+    var payload: Array[c_uchar, 0]
     @staticmethod
     def payload_offset() -> UInt:
         return 4
     @staticmethod
-    def payload_ptr(base: UnsafePointer[nft_packet_tail, ImmutUntrackedOrigin]) -> UnsafePointer[c_uchar, ImmutUntrackedOrigin]:
-        var raw = rebind[UnsafePointer[c_uchar, ImmutUntrackedOrigin]](base)
-        return raw + 4
+    def payload_ptr(base: Pointer[nft_packet_tail, ImmUntrackedOrigin]) -> Pointer[c_uchar, ImmUntrackedOrigin]:
+        var raw = rebind[Pointer[c_uchar, ImmUntrackedOrigin]](base)
+        return raw.unsafe_offset(4)
     @staticmethod
-    def payload_mut_ptr(base: UnsafePointer[nft_packet_tail, MutUntrackedOrigin]) -> UnsafePointer[c_uchar, MutUntrackedOrigin]:
-        var raw = rebind[UnsafePointer[c_uchar, MutUntrackedOrigin]](base)
-        return raw + 4
+    def payload_mut_ptr(base: Pointer[nft_packet_tail, MutUntrackedOrigin]) -> Pointer[c_uchar, MutUntrackedOrigin]:
+        var raw = rebind[Pointer[c_uchar, MutUntrackedOrigin]](base)
+        return raw.unsafe_offset(4)
 
 @align(4)
 struct nft_packet_wrapper:
@@ -29,10 +29,10 @@ struct nft_packet_wrapper:
     def payload_offset() -> UInt:
         return 8
     @staticmethod
-    def payload_ptr(base: UnsafePointer[nft_packet_wrapper, ImmutUntrackedOrigin]) -> UnsafePointer[c_uchar, ImmutUntrackedOrigin]:
-        var raw = rebind[UnsafePointer[c_uchar, ImmutUntrackedOrigin]](base)
-        return raw + 8
+    def payload_ptr(base: Pointer[nft_packet_wrapper, ImmUntrackedOrigin]) -> Pointer[c_uchar, ImmUntrackedOrigin]:
+        var raw = rebind[Pointer[c_uchar, ImmUntrackedOrigin]](base)
+        return raw.unsafe_offset(8)
     @staticmethod
-    def payload_mut_ptr(base: UnsafePointer[nft_packet_wrapper, MutUntrackedOrigin]) -> UnsafePointer[c_uchar, MutUntrackedOrigin]:
-        var raw = rebind[UnsafePointer[c_uchar, MutUntrackedOrigin]](base)
-        return raw + 8
+    def payload_mut_ptr(base: Pointer[nft_packet_wrapper, MutUntrackedOrigin]) -> Pointer[c_uchar, MutUntrackedOrigin]:
+        var raw = rebind[Pointer[c_uchar, MutUntrackedOrigin]](base)
+        return raw.unsafe_offset(8)

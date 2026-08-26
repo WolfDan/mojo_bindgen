@@ -302,7 +302,7 @@ class MojoIRPrinter:
                 b.extend(self._doc_comment_lines(member.doc))
                 b.add(f"var {member.name}: {self._render_type(member.type)}")
             elif isinstance(member, OpaqueStorageMember):
-                b.add(f"var {member.name}: InlineArray[UInt8, {member.size_bytes}]")
+                b.add(f"var {member.name}: Array[UInt8, {member.size_bytes}]")
             elif isinstance(member, BitfieldGroupMember):
                 b.add(f"var {member.storage_name}: {self._render_type(member.storage_type)}")
             else:
@@ -398,19 +398,19 @@ class MojoIRPrinter:
         b.dedent()
         b.add("@staticmethod")
         b.add(
-            f"def {tail.field_name}_ptr(base: UnsafePointer[{struct_name}, ImmutUntrackedOrigin]) -> UnsafePointer[{elem_type}, ImmutUntrackedOrigin]:"
+            f"def {tail.field_name}_ptr(base: Pointer[{struct_name}, ImmUntrackedOrigin]) -> Pointer[{elem_type}, ImmUntrackedOrigin]:"
         )
         b.indent()
-        b.add(f"var raw = rebind[UnsafePointer[{elem_type}, ImmutUntrackedOrigin]](base)")
-        b.add(f"return raw + {tail.byte_offset}")
+        b.add(f"var raw = rebind[Pointer[{elem_type}, ImmUntrackedOrigin]](base)")
+        b.add(f"return raw.unsafe_offset({tail.byte_offset})")
         b.dedent()
         b.add("@staticmethod")
         b.add(
-            f"def {tail.field_name}_mut_ptr(base: UnsafePointer[{struct_name}, MutUntrackedOrigin]) -> UnsafePointer[{elem_type}, MutUntrackedOrigin]:"
+            f"def {tail.field_name}_mut_ptr(base: Pointer[{struct_name}, MutUntrackedOrigin]) -> Pointer[{elem_type}, MutUntrackedOrigin]:"
         )
         b.indent()
-        b.add(f"var raw = rebind[UnsafePointer[{elem_type}, MutUntrackedOrigin]](base)")
-        b.add(f"return raw + {tail.byte_offset}")
+        b.add(f"var raw = rebind[Pointer[{elem_type}, MutUntrackedOrigin]](base)")
+        b.add(f"return raw.unsafe_offset({tail.byte_offset})")
         b.dedent()
 
     def _render_bitfield_accessor_read(
@@ -621,13 +621,13 @@ class MojoIRPrinter:
                 b.add(f"def {decl.name}({params_text}) -> None:")
                 b.indent()
                 self._render_docstring(b, decl.doc)
-                b.add(f'var {fn_local} = _bindgen_function[{fn_type}](StringSlice("{symbol_lit}"))')
+                b.add(f'var {fn_local} = _bindgen_function[{fn_type}](StringSpan("{symbol_lit}"))')
                 b.add(f"{fn_local}({call_args})")
             else:
                 b.add(f"def {decl.name}({params_text}) -> {return_type}:")
                 b.indent()
                 self._render_docstring(b, decl.doc)
-                b.add(f'var {fn_local} = _bindgen_function[{fn_type}](StringSlice("{symbol_lit}"))')
+                b.add(f'var {fn_local} = _bindgen_function[{fn_type}](StringSpan("{symbol_lit}"))')
                 b.add(f"return {fn_local}({call_args})")
         b.dedent()
         return b.render()
@@ -695,7 +695,7 @@ class MojoIRPrinter:
         if isinstance(t, Array):
             if t.size is None:
                 raise MojoIRPrintError("cannot render array type without a fixed size")
-            return f"InlineArray[{self._render_type(t.element)}, {t.size}]"
+            return f"Array[{self._render_type(t.element)}, {t.size}]"
         if isinstance(t, ParametricType):
             args = ", ".join(self._render_parametric_arg(arg) for arg in t.args)
             return f"{t.base.value}[{args}]"
@@ -705,15 +705,11 @@ class MojoIRPrinter:
 
     def _render_pointer_type(self, t: Pointer) -> str:
         if t.pointee is None:
-            ptr_name = (
-                "ImmutOpaquePointer"
-                if t.mutability == PointerMutability.IMMUT
-                else "MutOpaquePointer"
-            )
-            rendered = f"{ptr_name}[{self._origin_name(t.origin, t.mutability)}]"
+            mut_text = "False" if t.mutability == PointerMutability.IMMUT else "True"
+            rendered = f"OpaquePointer[mut={mut_text}, {self._origin_name(t.origin, t.mutability)}]"
         else:
             rendered = (
-                f"UnsafePointer[{self._render_type(t.pointee)}, "
+                f"Pointer[{self._render_type(t.pointee)}, "
                 f"{self._origin_name(t.origin, t.mutability)}]"
             )
         return f"Optional[{rendered}]" if t.nullable else rendered
@@ -828,14 +824,12 @@ class MojoIRPrinter:
     def _origin_name(origin: PointerOrigin, mutability: PointerMutability) -> str:
         if origin == PointerOrigin.ANY:
             return (
-                "ImmutUnsafeAnyOrigin"
+                "ImmUnsafeAnyOrigin"
                 if mutability == PointerMutability.IMMUT
                 else "MutUnsafeAnyOrigin"
             )
         return (
-            "ImmutUntrackedOrigin"
-            if mutability == PointerMutability.IMMUT
-            else "MutUntrackedOrigin"
+            "ImmUntrackedOrigin" if mutability == PointerMutability.IMMUT else "MutUntrackedOrigin"
         )
 
     @staticmethod

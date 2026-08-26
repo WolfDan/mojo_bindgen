@@ -12,4 +12,4 @@ comptime uint32_t = UInt32
 # NOTE[struct_mapping]: member at byte offset 1 is before the natural typed offset 4; opaque storage emitted
 # NOTE[struct_mapping]: C base alignment 1 is smaller than the natural typed Mojo alignment 4; opaque storage emitted
 struct psc_header(Copyable, Movable):
-    var storage: InlineArray[UInt8, 5]
+    var storage: Array[UInt8, 5]

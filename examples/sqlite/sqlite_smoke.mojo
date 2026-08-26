@@ -14,38 +14,38 @@ def _assert(label: String, cond: Bool) raises:
     print(label + "|ok")
 
 
-def _cstr(s: StaticString) -> UnsafePointer[Int8, ImmutUntrackedOrigin]:
-    return rebind[UnsafePointer[Int8, ImmutUntrackedOrigin]](s.unsafe_ptr())
+def _cstr(s: StaticString) -> Pointer[Int8, ImmUntrackedOrigin]:
+    return rebind[Pointer[Int8, ImmUntrackedOrigin]](s.unsafe_ptr())
 
 
 def _ignore_exec_row(
-    data: Optional[MutOpaquePointer[MutUntrackedOrigin]],
+    data: Optional[OpaquePointer[mut=True, MutUntrackedOrigin]],
     columns: c_int,
     values: Optional[
-        UnsafePointer[Optional[UnsafePointer[Int8, MutUntrackedOrigin]], MutUntrackedOrigin]
+        Pointer[Optional[Pointer[Int8, MutUntrackedOrigin]], MutUntrackedOrigin]
     ],
     names: Optional[
-        UnsafePointer[Optional[UnsafePointer[Int8, MutUntrackedOrigin]], MutUntrackedOrigin]
+        Pointer[Optional[Pointer[Int8, MutUntrackedOrigin]], MutUntrackedOrigin]
     ],
 ) abi("C") -> c_int:
     return 0
 
 
 def _ignore_bound_value(
-    value: Optional[UnsafePointer[NoneType, MutUntrackedOrigin]],
+    value: Optional[Pointer[NoneType, MutUntrackedOrigin]],
 ) abi("C"):
     pass
 
 
-def _errmsg(db: UnsafePointer[sql.sqlite3, MutUntrackedOrigin]) -> String:
+def _errmsg(db: Pointer[sql.sqlite3, MutUntrackedOrigin]) -> String:
     var p = sql.sqlite3_errmsg(db)
-    if p == Optional[UnsafePointer[Int8, ImmutUntrackedOrigin]]():
+    if p == Optional[Pointer[Int8, ImmUntrackedOrigin]]():
         return "<null errmsg>"
     return String(p.value())
 
 
 def _check_db_rc(
-    label: String, db: UnsafePointer[sql.sqlite3, MutUntrackedOrigin], rc: Int32
+    label: String, db: Pointer[sql.sqlite3, MutUntrackedOrigin], rc: Int32
 ) raises:
     if rc != Int32(sql.SQLITE_OK):
         raise Error(label + " rc=" + String(rc) + " err=" + _errmsg(db))
@@ -57,24 +57,24 @@ def _check_db_rc(
 # ---------------------------
 
 
-def _open_memory() raises -> UnsafePointer[sql.sqlite3, MutUntrackedOrigin]:
-    var ppDb = alloc[Optional[UnsafePointer[sql.sqlite3, MutUntrackedOrigin]]](1)
+def _open_memory() raises -> Pointer[sql.sqlite3, MutUntrackedOrigin]:
+    var ppDb = alloc[Optional[Pointer[sql.sqlite3, MutUntrackedOrigin]]](1)
     var rc = sql.sqlite3_open_v2(
         _cstr(":memory:\0"),
         ppDb,
         Int32(sql.SQLITE_OPEN_READWRITE | sql.SQLITE_OPEN_CREATE),
-        Optional[UnsafePointer[Int8, ImmutUntrackedOrigin]](),
+        Optional[Pointer[Int8, ImmUntrackedOrigin]](),
     )
     _assert("open.rc", rc == Int32(sql.SQLITE_OK))
     _assert(
         "open.nonnull",
-        ppDb[0] != Optional[UnsafePointer[sql.sqlite3, MutUntrackedOrigin]](),
+        ppDb[0] != Optional[Pointer[sql.sqlite3, MutUntrackedOrigin]](),
     )
     return ppDb[0].value()
 
 
 def _exec(
-    db: UnsafePointer[sql.sqlite3, MutUntrackedOrigin],
+    db: Pointer[sql.sqlite3, MutUntrackedOrigin],
     s: StaticString,
     label: String,
 ) raises:
@@ -82,31 +82,31 @@ def _exec(
         db,
         _cstr(s),
         _ignore_exec_row,
-        Optional[MutOpaquePointer[MutUntrackedOrigin]](),
-        alloc[Optional[UnsafePointer[Int8, MutUntrackedOrigin]]](1),
+        Optional[OpaquePointer[mut=True, MutUntrackedOrigin]](),
+        alloc[Optional[Pointer[Int8, MutUntrackedOrigin]]](1),
     )
     _check_db_rc(label, db, rc)
 
 
 def _prepare(
-    db: UnsafePointer[sql.sqlite3, MutUntrackedOrigin],
+    db: Pointer[sql.sqlite3, MutUntrackedOrigin],
     s: StaticString,
     label: String,
-) raises -> UnsafePointer[sql.sqlite3_stmt, MutUntrackedOrigin]:
-    var pp = alloc[Optional[UnsafePointer[sql.sqlite3_stmt, MutUntrackedOrigin]]](1)
+) raises -> Pointer[sql.sqlite3_stmt, MutUntrackedOrigin]:
+    var pp = alloc[Optional[Pointer[sql.sqlite3_stmt, MutUntrackedOrigin]]](1)
     var rc = sql.sqlite3_prepare_v2(
         db,
         _cstr(s),
         -1,
         pp,
-        alloc[Optional[UnsafePointer[Int8, ImmutUntrackedOrigin]]](1),
+        alloc[Optional[Pointer[Int8, ImmUntrackedOrigin]]](1),
     )
     _check_db_rc(label, db, rc)
     return pp[0].value()
 
 
 def _finalize(
-    stmt: UnsafePointer[sql.sqlite3_stmt, MutUntrackedOrigin], label: String
+    stmt: Pointer[sql.sqlite3_stmt, MutUntrackedOrigin], label: String
 ) raises:
     var rc = sql.sqlite3_finalize(stmt)
     _assert(label, rc == Int32(sql.SQLITE_OK))
@@ -120,12 +120,12 @@ def _finalize(
 def run_basic_checks() raises:
     _assert("libversion_number", sql.sqlite3_libversion_number() > 0)
     var v = sql.sqlite3_libversion()
-    _assert("libversion_ptr", v != Optional[UnsafePointer[Int8, ImmutUntrackedOrigin]]())
+    _assert("libversion_ptr", v != Optional[Pointer[Int8, ImmUntrackedOrigin]]())
     print("basic|PASS")
 
 
 def run_exec_and_rowid(
-    db: UnsafePointer[sql.sqlite3, MutUntrackedOrigin],
+    db: Pointer[sql.sqlite3, MutUntrackedOrigin],
 ) raises -> None:
     _exec(
         db,
@@ -141,7 +141,7 @@ def run_exec_and_rowid(
     print("exec_rowid|PASS")
 
 
-def run_prepare_reuse(db: UnsafePointer[sql.sqlite3, MutUntrackedOrigin]) raises:
+def run_prepare_reuse(db: Pointer[sql.sqlite3, MutUntrackedOrigin]) raises:
     _exec(db, "CREATE TABLE t2 (v INT);\0", "prep.schema")
 
     var stmt = _prepare(db, "INSERT INTO t2(v) VALUES (?);\0", "prep.insert")
@@ -165,7 +165,7 @@ def run_prepare_reuse(db: UnsafePointer[sql.sqlite3, MutUntrackedOrigin]) raises
 
 
 def run_text_roundtrip(
-    db: UnsafePointer[sql.sqlite3, MutUntrackedOrigin],
+    db: Pointer[sql.sqlite3, MutUntrackedOrigin],
 ) raises -> None:
     _exec(db, "CREATE TABLE txt (v TEXT);\0", "text.schema")
 
@@ -194,7 +194,7 @@ def run_text_roundtrip(
     )
 
     var p = sql.sqlite3_column_text(stmt, 0)
-    _assert("col.text.ptr", p != Optional[UnsafePointer[UInt8, ImmutUntrackedOrigin]]())
+    _assert("col.text.ptr", p != Optional[Pointer[UInt8, ImmUntrackedOrigin]]())
 
     _finalize(stmt, "finalize.text.select")
 
@@ -202,7 +202,7 @@ def run_text_roundtrip(
 
 
 def run_blob_roundtrip(
-    db: UnsafePointer[sql.sqlite3, MutUntrackedOrigin]
+    db: Pointer[sql.sqlite3, MutUntrackedOrigin]
 ) raises:
     _exec(db, "CREATE TABLE b (v BLOB);\0", "blob.schema")
 
@@ -217,7 +217,7 @@ def run_blob_roundtrip(
     var rc = sql.sqlite3_bind_blob(
         stmt,
         1,
-        rebind[ImmutOpaquePointer[ImmutUntrackedOrigin]](buf),
+        rebind[OpaquePointer[mut=False, ImmUntrackedOrigin]](buf),
         4,
         _ignore_bound_value,
     )
@@ -239,7 +239,7 @@ def run_blob_roundtrip(
     _assert("blob.size", size == 4)
 
     var data = sql.sqlite3_column_blob(stmt, 0)
-    _assert("blob.ptr", data != Optional[ImmutOpaquePointer[ImmutUntrackedOrigin]]())
+    _assert("blob.ptr", data != Optional[OpaquePointer[mut=False, ImmUntrackedOrigin]]())
 
     _finalize(stmt, "finalize.blob.select")
 
