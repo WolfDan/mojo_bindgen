@@ -5,10 +5,10 @@ name = "mojo_bindgen"
 platforms = ["linux-64"]
 preview = ["pixi-build"]
 
-[package.build] 
+[package.build]
 backend = { name = "pixi-build-python", version = "0.*" }
 
-[package.host-dependencies] 
+[package.host-dependencies]
 hatchling = "==1.26.3"
 
 
@@ -28,7 +28,7 @@ example-libpng = "bash examples/libpng/generate.sh"
 example-sqlite = "bash examples/sqlite/generate.sh"
 
 [dependencies]
-mojo = ">=1.0.0,<2"
+mojo = "1.*"
 python = ">=3.14.4,<3.15"
 pip = ">=26.0.1,<27"
 rich = ">=15.0.0,<16"
